@@ -5,35 +5,49 @@ import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signe
 import { Signers } from "../types";
 import { Project } from "../../src/types/Project";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 
 describe("Unit tests", function () {
+  let adminAction: any;
+  let employee1: SignerWithAddress;
+  const oneEth: BigNumber = ethers.utils.parseEther("1.0");
+
   before(async function () {
     this.signers = {} as Signers;
 
     const signers: SignerWithAddress[] = await ethers.getSigners();
     this.signers.admin = signers[0];
+    employee1 = signers[1];
   });
 
   describe("Projects", function () {
     beforeEach(async function () {
       const projectArtifact: Artifact = await artifacts.readArtifact("Project");
       this.project = <Project>await waffle.deployContract(this.signers.admin, projectArtifact, [[]]);
+
+      adminAction = this.project.connect(this.signers.admin);
     });
 
     it("should return the owner's address", async function () {
-      expect(await this.project.connect(this.signers.admin).getOwnerAddress()).to.equal(this.signers.admin.address);
+      expect(await adminAction.getOwnerAddress()).to.equal(this.signers.admin.address);
     });
 
     it("should let you add employees", async function () {
-      const signers: SignerWithAddress[] = await ethers.getSigners();
+      await adminAction.addEmployee(employee1.address);
+      expect(await adminAction.getEmployeeAddresses()).to.contain(employee1.address);
+    });
 
-      const employee1 = signers[1];
+    it("should allow you pay an employee if the project has a sufficient balance", async function () {
+      await this.signers.admin.sendTransaction({
+        to: this.project.address,
+        value: oneEth, // Sends exactly 1.0 ether
+      });
 
-      const employeeAddress = employee1.address;
+      expect(await adminAction.getBalance()).to.equal(oneEth);
 
-      await this.project.connect(this.signers.admin).addEmployee(employeeAddress);
+      await adminAction.payEmployee(employee1.address, oneEth);
 
-      expect(await this.project.connect(this.signers.admin).getEmployeeAddresses()).to.contain(employeeAddress);
+      expect(await adminAction.getBalance()).to.equal(0);
     });
   });
 });
