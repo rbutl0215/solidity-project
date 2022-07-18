@@ -2,13 +2,17 @@
 pragma solidity >=0.8.4;
 
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Payment.sol";
 
 error ProjectError();
 
-contract Project {
+contract Project is Ownable {
     address public ownerAddress;
-    address payable[] public employeeAddress;
+    address[] public employeeAddress;
     mapping(address => uint256) public employeeBalances;
+    Payment[] public payments;
+    address masterPayment;
 
     constructor(address payable[] memory _employeeAddress) {
         ownerAddress = msg.sender;
@@ -21,11 +25,11 @@ contract Project {
         return ownerAddress;
     }
 
-    function getEmployeeAddresses() public view returns (address payable[] memory) {
+    function getEmployeeAddresses() public view returns (address[] memory) {
         return employeeAddress;
     }
 
-    function addEmployee(address payable _employeeAddress) public {
+    function addEmployee(address payable _employeeAddress) public onlyOwner {
         employeeAddress.push(_employeeAddress);
     }
 
@@ -33,25 +37,20 @@ contract Project {
         return address(this).balance;
     }
 
-    function payEmployee(address payable _employeeAddress, uint256 amount) public {
+    function getPayments() public view returns (Payment[] memory) {
+        return payments;
+    }
+
+    function payEmployee(address payable _employeeAddress, uint256 amount) public onlyOwner {
         require(msg.sender == ownerAddress, "Only the owner may pay the employees");
         require(address(this).balance >= amount, "Insuffcient funds to pay employee. Deposit more into the contract.");
 
         _employeeAddress.transfer(amount);
     }
 
-    //Below are preliminary functions for allow an employee to accrue accounts receviable without transfering funds
-    function payEmployeeFullBalance(address payable _employeeAddress) public {
-        require(msg.sender == ownerAddress);
-        require(address(this).balance > employeeBalances[_employeeAddress]);
-
-        _employeeAddress.transfer(employeeBalances[_employeeAddress]);
-
-        employeeBalances[_employeeAddress] = 0;
-    }
-
-    function increaseEmployeeBalance(address _employeeAddress, uint256 _payment) public {
-        employeeBalances[_employeeAddress] += _payment;
+    function createPayment(address[] memory _payees, uint256[] memory _shares) public onlyOwner {
+        Payment payment = new Payment(_payees, _shares);
+        payments.push(payment);
     }
 
     function throwError() external pure {
