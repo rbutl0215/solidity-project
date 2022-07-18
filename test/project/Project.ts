@@ -35,9 +35,12 @@ describe("Unit tests", function () {
       expect(await adminAction.getOwnerAddress()).to.equal(this.signers.admin.address);
     });
 
-    it("should let you add employees", async function () {
+    it("should let you add and remove employees", async function () {
       await adminAction.addEmployee(employee1.address);
       expect(await adminAction.getEmployeeAddresses()).to.contain(employee1.address);
+
+      await adminAction.removeEmployee(0);
+      expect(await adminAction.getEmployeeAddresses()).to.not.contain(employee1.address);
     });
 
     it("should allow you pay an employee if the project has a sufficient balance", async function () {

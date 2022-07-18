@@ -10,7 +10,7 @@ error ProjectError();
 contract Project is Ownable {
     address public ownerAddress;
     address[] public employeeAddress;
-    mapping(address => uint256) public employeeBalances;
+    mapping(address => uint256) public employeeIndex;
     Payment[] public payments;
     address masterPayment;
 
@@ -31,6 +31,13 @@ contract Project is Ownable {
 
     function addEmployee(address payable _employeeAddress) public onlyOwner {
         employeeAddress.push(_employeeAddress);
+    }
+
+    //TODO: create method to remove employee based on address not index
+    function removeEmployee(uint256 index) public onlyOwner {
+        employeeAddress[index] = employeeAddress[employeeAddress.length - 1];
+
+        employeeAddress.pop();
     }
 
     function getBalance() public view returns (uint256) {
