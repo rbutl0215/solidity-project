@@ -4,6 +4,7 @@ pragma solidity >=0.8.4;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/finance/VestingWallet.sol";
 import "./Payment.sol";
 
 error ProjectError();
@@ -65,9 +66,31 @@ contract Project is Ownable {
         _employeeAddress.transfer(amount);
     }
 
-    function createPayment(address[] memory _payees, uint256[] memory _shares) public onlyOwner {
+    function createPayment(
+        address[] memory _payees,
+        uint256[] memory _shares,
+        uint64 amount
+    ) public onlyOwner returns (address) {
         Payment payment = new Payment(_payees, _shares);
         payments.push(payment);
+
+        payable(payment).transfer(amount);
+        return address(payment);
+    }
+
+    function createAutomatedPaymentSchedule(
+        address[] memory _payees,
+        uint256[] memory _shares,
+        uint64 startTime,
+        uint64 vestingDuration,
+        uint64 amount
+    ) public onlyOwner {
+        //Initialize Payment Contact with No ETH
+        address paymentAddress = createPayment(_payees, _shares, 0);
+
+        VestingWallet vestingWallet = new VestingWallet(paymentAddress, startTime, vestingDuration);
+
+        payable(vestingWallet).transfer(amount);
     }
 
     //WIP: Utilize clone factory framework to minimize gas fees
